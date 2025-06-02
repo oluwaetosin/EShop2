@@ -1,8 +1,18 @@
 ﻿using BuildingBlocks.CQRS;
 using Catalog.API.Models;
+using FluentValidation;
+using Marten;
 
 namespace Catalog.API.Products.CreateProduct
 {
+
+    public class CreateProductValidator : AbstractValidator<CreateProductCommand>
+    {
+        public CreateProductValidator()
+        {
+            RuleFor(x => x.Name).NotEmpty().WithMessage("Name is required");
+        }
+    }
     public record CreateProductCommand(
         string Name,
         List<string> Category,
@@ -13,11 +23,17 @@ namespace Catalog.API.Products.CreateProduct
 
     public record CreateProductResult(Guid Id);
 
-    internal class CreateProductCommadHandler 
+
+
+    internal class CreateProductCommadHandler (IDocumentSession session
+        )
         : ICommandHandler<CreateProductCommand, CreateProductResult>
     {
         public async Task<CreateProductResult> Handle(CreateProductCommand command, CancellationToken cancellationToken)
         {
+           
+
+            
             var product = new Product
             {
                 Name = command.Name,
@@ -28,8 +44,10 @@ namespace Catalog.API.Products.CreateProduct
             };
 
             // save to database
+            session.Store(product);
+            await session.SaveChangesAsync(cancellationToken);
 
-            return new CreateProductResult(Guid.NewGuid());
+            return new CreateProductResult(product.Id);
         }
     }
 
